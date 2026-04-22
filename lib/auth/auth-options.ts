@@ -28,43 +28,48 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        const normalizedEmail = credentials.email.trim().toLowerCase();
-        const normalizedPassword = credentials.password.trim();
+        try {
+          const normalizedEmail = credentials.email.trim().toLowerCase();
+          const normalizedPassword = credentials.password.trim();
 
-        const user = await prisma.user.findFirst({
-          where: {
-            email: {
-              equals: normalizedEmail,
-              mode: 'insensitive',
+          const user = await prisma.user.findFirst({
+            where: {
+              email: {
+                equals: normalizedEmail,
+                mode: 'insensitive',
+              },
             },
-          },
-        });
+          });
 
-        if (!user) {
-          console.warn('[auth] login failed: user not found', { email: normalizedEmail });
-          return null;
+          if (!user) {
+            console.warn('[auth] login failed: user not found', { email: normalizedEmail });
+            return null;
+          }
+
+          if (!user.isActive) {
+            console.warn('[auth] login failed: inactive user', { email: normalizedEmail, userId: user.id });
+            return null;
+          }
+
+          const passwordMatches = isBcryptHash(user.passwordHash)
+            ? await compare(normalizedPassword, user.passwordHash)
+            : normalizedPassword === user.passwordHash;
+
+          if (!passwordMatches) {
+            console.warn('[auth] login failed: invalid password', { email: normalizedEmail, userId: user.id });
+            return null;
+          }
+
+          return {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+          };
+        } catch (error) {
+          console.error('[auth] database unavailable while trying credentials login', error);
+          throw new Error('AUTH_DB_UNAVAILABLE');
         }
-
-        if (!user.isActive) {
-          console.warn('[auth] login failed: inactive user', { email: normalizedEmail, userId: user.id });
-          return null;
-        }
-
-        const passwordMatches = isBcryptHash(user.passwordHash)
-          ? await compare(normalizedPassword, user.passwordHash)
-          : normalizedPassword === user.passwordHash;
-
-        if (!passwordMatches) {
-          console.warn('[auth] login failed: invalid password', { email: normalizedEmail, userId: user.id });
-          return null;
-        }
-
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-        };
       },
     }),
   ],

@@ -4,6 +4,19 @@ import { FormEvent, useMemo, useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+
+function resolveLoginError(errorCode?: string | null) {
+  if (!errorCode) {
+    return 'Credenciais inválidas ou usuário inativo.';
+  }
+
+  if (errorCode.includes('AUTH_DB_UNAVAILABLE') || errorCode.includes('CallbackRouteError')) {
+    return 'Não foi possível conectar ao banco de dados. Verifique se o PostgreSQL está ativo em localhost:5432.';
+  }
+
+  return 'Credenciais inválidas ou usuário inativo.';
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -29,7 +42,7 @@ export default function LoginPage() {
     setIsLoading(false);
 
     if (!result || result.error) {
-      setErrorMessage('Credenciais inválidas ou usuário inativo.');
+      setErrorMessage(resolveLoginError(result.error));
       return;
     }
 

@@ -58,7 +58,7 @@ Consulte `docs/etapa-1.md` para visão de arquitetura base.
 
 ## Troubleshooting de login (401 em /api/auth/callback/credentials)
 
-Se todos os logins retornarem **Credenciais inválidas**:
+Se todos os logins retornarem **Credenciais inválidas** ou a mensagem de banco indisponível:
 
 1. Confirme se o banco está no ar e acessível pela `DATABASE_URL`.
 2. Rode novamente migration + seed:
