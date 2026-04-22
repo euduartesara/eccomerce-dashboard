@@ -1,0 +1,312 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+enum TaskType {
+  DAILY
+  WEEKLY
+  MONTHLY
+  FREE
+}
+
+enum TaskRecurrence {
+  NONE
+  DAILY
+  WEEKLY
+  MONTHLY
+  CUSTOM
+}
+
+enum PriorityLevel {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum MetricSource {
+  MANUAL
+  TRAY
+  MERCADO_LIVRE
+  IMPORT
+}
+
+enum SkuRecordType {
+  NEW
+  UPDATED
+}
+
+enum VideoStatus {
+  PENDING
+  SCRIPTING
+  RECORDING
+  EDITING
+  DONE
+}
+
+enum ActivityType {
+  INTERNAL_MEETING
+  STUDY
+  EXTRA
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  STATUS_CHANGE
+  LOGIN
+  LOGOUT
+  EXPORT
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(USER)
+  isActive     Boolean  @default(true)
+
+  createdById String?
+  updatedById String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  createdBy User? @relation("UserCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("UserUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  createdUsers User[] @relation("UserCreatedBy")
+  updatedUsers User[] @relation("UserUpdatedBy")
+
+  tasksResponsible Task[] @relation("TaskResponsible")
+  tasksCreated     Task[] @relation("TaskCreatedBy")
+  tasksUpdated     Task[] @relation("TaskUpdatedBy")
+
+  metricsResponsible MetricEntry[] @relation("MetricResponsible")
+  metricsCreated     MetricEntry[] @relation("MetricCreatedBy")
+  metricsUpdated     MetricEntry[] @relation("MetricUpdatedBy")
+
+  skuRecords         SkuRecord[] @relation("SkuRecordedBy")
+  skuRecordsCreated  SkuRecord[] @relation("SkuCreatedBy")
+  skuRecordsUpdated  SkuRecord[] @relation("SkuUpdatedBy")
+
+  videosResponsible VideoProduct[] @relation("VideoResponsible")
+  videosCreated     VideoProduct[] @relation("VideoCreatedBy")
+  videosUpdated     VideoProduct[] @relation("VideoUpdatedBy")
+
+  activitiesResponsible SpecificActivity[] @relation("ActivityResponsible")
+  activitiesCreated     SpecificActivity[] @relation("ActivityCreatedBy")
+  activitiesUpdated     SpecificActivity[] @relation("ActivityUpdatedBy")
+
+  channelsCreated Channel[] @relation("ChannelCreatedBy")
+  channelsUpdated Channel[] @relation("ChannelUpdatedBy")
+
+  auditLogs AuditLog[]
+
+  @@index([role])
+  @@index([isActive])
+}
+
+model Task {
+  id          String         @id @default(cuid())
+  title       String
+  description String?
+  type        TaskType
+  recurrence  TaskRecurrence @default(NONE)
+  dueDate     DateTime?
+  startTime   DateTime?
+  endTime     DateTime?
+  priority    PriorityLevel  @default(MEDIUM)
+  status      TaskStatus     @default(PENDING)
+  notes       String?
+  isTemplate  Boolean        @default(false)
+
+  responsibleId String?
+  createdById   String?
+  updatedById   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  responsible User? @relation("TaskResponsible", fields: [responsibleId], references: [id], onDelete: SetNull)
+  createdBy   User? @relation("TaskCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy   User? @relation("TaskUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([type, status])
+  @@index([dueDate])
+  @@index([responsibleId])
+  @@index([isTemplate])
+  @@index([createdAt])
+}
+
+model Channel {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  slug        String  @unique
+  description String?
+  isActive    Boolean @default(true)
+
+  createdById String?
+  updatedById String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  createdBy User? @relation("ChannelCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("ChannelUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  metrics MetricEntry[]
+
+  @@index([isActive])
+  @@index([name])
+}
+
+model MetricEntry {
+  id             String       @id @default(cuid())
+  weekStartDate  DateTime
+  weekEndDate    DateTime
+  revenue        Decimal      @db.Decimal(14, 2)
+  conversionRate Decimal?     @db.Decimal(5, 2)
+  notes          String?
+  source         MetricSource @default(MANUAL)
+  externalRef    String?
+  importedAt     DateTime?
+
+  channelId     String
+  responsibleId String
+  createdById   String?
+  updatedById   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  channel     Channel @relation(fields: [channelId], references: [id], onDelete: Restrict)
+  responsible User    @relation("MetricResponsible", fields: [responsibleId], references: [id], onDelete: Restrict)
+  createdBy   User?   @relation("MetricCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy   User?   @relation("MetricUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([weekStartDate])
+  @@index([weekEndDate])
+  @@index([channelId, weekStartDate])
+  @@index([responsibleId, weekStartDate])
+  @@index([source])
+}
+
+model SkuRecord {
+  id                  String        @id @default(cuid())
+  sku                 String
+  productName         String
+  type                SkuRecordType
+  priceAdjusted       Boolean       @default(false)
+  stockSynced         Boolean       @default(false)
+  listingFixed        Boolean       @default(false)
+  kitCreatedOrEnabled Boolean       @default(false)
+  notes               String?
+  recordedAt          DateTime      @default(now())
+
+  recordedById String
+  createdById  String?
+  updatedById  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  recordedBy User  @relation("SkuRecordedBy", fields: [recordedById], references: [id], onDelete: Restrict)
+  createdBy  User? @relation("SkuCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy  User? @relation("SkuUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([sku])
+  @@index([recordedAt])
+  @@index([recordedById, recordedAt])
+}
+
+model VideoProduct {
+  id          String       @id @default(cuid())
+  code        String
+  name        String
+  link        String?
+  status      VideoStatus  @default(PENDING)
+  priority    PriorityLevel?
+  notes       String?
+  weekStartDate DateTime
+  weekEndDate   DateTime?
+
+  responsibleId String?
+  createdById   String?
+  updatedById   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  responsible User? @relation("VideoResponsible", fields: [responsibleId], references: [id], onDelete: SetNull)
+  createdBy   User? @relation("VideoCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy   User? @relation("VideoUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([weekStartDate])
+  @@index([status])
+  @@index([responsibleId])
+  @@index([code, weekStartDate])
+}
+
+model SpecificActivity {
+  id              String       @id @default(cuid())
+  description     String
+  type            ActivityType
+  durationMinutes Int
+  activityDate    DateTime
+  notes           String?
+
+  responsibleId String
+  createdById   String?
+  updatedById   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  responsible User  @relation("ActivityResponsible", fields: [responsibleId], references: [id], onDelete: Restrict)
+  createdBy   User? @relation("ActivityCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy   User? @relation("ActivityUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([activityDate])
+  @@index([type])
+  @@index([responsibleId, activityDate])
+}
+
+model AuditLog {
+  id         String      @id @default(cuid())
+  entityType String
+  entityId   String
+  action     AuditAction
+  payload    Json?
+  ipAddress  String?
+  userAgent  String?
+
+  actorId String?
+
+  createdAt DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
+}
