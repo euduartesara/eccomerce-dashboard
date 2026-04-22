@@ -72,7 +72,12 @@ export default function LoginPage() {
             />
           </label>
 
-          {errorMessage ? <p className="text-sm text-red-600">{errorMessage}</p> : null}
+          {errorMessage ? (
+            <div className="space-y-1">
+              <p className="text-sm text-red-600">{errorMessage}</p>
+              <p className="text-xs text-muted">Se for o primeiro acesso, confirme se o seed foi executado (npm run prisma:seed).</p>
+            </div>
+          ) : null}
 
           <button
             className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"

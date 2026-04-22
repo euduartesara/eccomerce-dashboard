@@ -55,3 +55,20 @@ NEXTAUTH_SECRET="change-this-secret-with-at-least-16-chars"
 ## Estrutura
 
 Consulte `docs/etapa-1.md` para visão de arquitetura base.
+
+## Troubleshooting de login (401 em /api/auth/callback/credentials)
+
+Se todos os logins retornarem **Credenciais inválidas**:
+
+1. Confirme se o banco está no ar e acessível pela `DATABASE_URL`.
+2. Rode novamente migration + seed:
+
+```bash
+npm run prisma:migrate
+npm run prisma:seed
+```
+
+3. Verifique no terminal do Next.js os logs `[auth] login failed: ...` para identificar se foi:
+   - usuário não encontrado,
+   - usuário inativo,
+   - senha inválida.

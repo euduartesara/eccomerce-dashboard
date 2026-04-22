@@ -4,7 +4,12 @@ import { compare } from 'bcryptjs';
 
 import { prisma } from '@/lib/db/prisma';
 
+function isBcryptHash(value: string) {
+  return /^\$2[aby]\$\d{2}\$/.test(value);
+}
+
 export const authOptions: NextAuthOptions = {
+  secret: process.env.NEXTAUTH_SECRET,
   session: {
     strategy: 'jwt',
   },
@@ -23,19 +28,34 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        const user = await prisma.user.findUnique({
+        const normalizedEmail = credentials.email.trim().toLowerCase();
+        const normalizedPassword = credentials.password.trim();
+
+        const user = await prisma.user.findFirst({
           where: {
-            email: credentials.email.toLowerCase().trim(),
+            email: {
+              equals: normalizedEmail,
+              mode: 'insensitive',
+            },
           },
         });
 
-        if (!user || !user.isActive) {
+        if (!user) {
+          console.warn('[auth] login failed: user not found', { email: normalizedEmail });
           return null;
         }
 
-        const passwordMatches = await compare(credentials.password, user.passwordHash);
+        if (!user.isActive) {
+          console.warn('[auth] login failed: inactive user', { email: normalizedEmail, userId: user.id });
+          return null;
+        }
+
+        const passwordMatches = isBcryptHash(user.passwordHash)
+          ? await compare(normalizedPassword, user.passwordHash)
+          : normalizedPassword === user.passwordHash;
 
         if (!passwordMatches) {
+          console.warn('[auth] login failed: invalid password', { email: normalizedEmail, userId: user.id });
           return null;
         }
 
