@@ -8,13 +8,13 @@ import { cn } from '@/lib/utils/cn';
 
 const navigationItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/tasks', label: 'Tarefas', icon: CheckSquare },
-  { href: '/metrics', label: 'Métricas', icon: BarChart3 },
+  { href: '/tarefas', label: 'Tarefas', icon: CheckSquare },
+  { href: '/metricas', label: 'Métricas', icon: BarChart3 },
   { href: '/skus', label: 'SKUs', icon: PackageSearch },
   { href: '/videos', label: 'Vídeos', icon: Film },
-  { href: '/activities', label: 'Atividades', icon: ReceiptText },
-  { href: '/reports', label: 'Relatórios', icon: BarChart3 },
-  { href: '/users', label: 'Usuários', icon: Users },
+  { href: '/atividades', label: 'Atividades', icon: ReceiptText },
+  { href: '/relatorios', label: 'Relatórios', icon: BarChart3 },
+  { href: '/usuarios', label: 'Usuários', icon: Users },
 ];
 
 export function AppSidebar() {
